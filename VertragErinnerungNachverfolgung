@@ -1,0 +1,83 @@
+Sub VertragErinnerungNachverfolgung()
+    ' Deklariere Variablen
+    Dim olApp As Outlook.Application
+    Dim olNamespace As Outlook.NameSpace
+    Dim NachverfolgungFolder As Outlook.Folder
+    Dim AbgeschlossenFolder As Outlook.Folder
+    Dim olInbox As Outlook.Folder
+    Dim olMail As Outlook.MailItem
+    Dim replyMail As Outlook.MailItem
+    Dim antwortVorhanden As Boolean
+    Dim ReminderMail As Outlook.MailItem
+    Dim PersonenMitAntwort As String
+    Dim PersonenMitErinnerung As String
+ 
+    ' Initialisiere Outlook-Objekte
+    Set olApp = Outlook.Application
+    Set olNamespace = olApp.GetNamespace("MAPI")
+ 
+    ' Hole die Zielordner
+    Set NachverfolgungFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders("Vertragswesen").Folders("Nachverfolgung")
+    Set AbgeschlossenFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders("Vertragswesen").Folders("Abgeschlossen")
+    Set olInbox = olNamespace.GetDefaultFolder(olFolderInbox)
+ 
+    ' Initialisiere Zusammenfassungs-Strings
+    PersonenMitAntwort = "Personen, die geantwortet haben:" & vbCrLf
+    PersonenMitErinnerung = "Personen, die eine Erinnerung erhalten haben:" & vbCrLf
+ 
+    ' Überprüfe E-Mails im Nachverfolgung-Ordner
+    For Each Item In NachverfolgungFolder.Items
+        If TypeName(Item) = "MailItem" Then
+            Set olMail = Item
+            antwortVorhanden = False
+ 
+            ' Suche im Posteingang nach Antworten
+            For Each Reply In olInbox.Items
+                If TypeName(Reply) = "MailItem" Then
+                    Set replyMail = Reply
+                    ' Prüfe, ob eine Antwort mit "RE:" oder "AW:" im Betreff vorliegt (case-insensitiv)
+                    If (LCase(replyMail.Subject) = "re: " & LCase(olMail.Subject) Or _
+                        LCase(replyMail.Subject) = "aw: " & LCase(olMail.Subject)) And _
+                        replyMail.SentOn >= olMail.SentOn Then
+ 
+                        antwortVorhanden = True
+                        ' Verschiebe die E-Mails in den Abgeschlossen-Ordner
+                        olMail.Move AbgeschlossenFolder
+                        replyMail.Move AbgeschlossenFolder
+ 
+                        ' Füge E-Mail-Adresse zur Antwort-Zusammenfassung hinzu
+                        PersonenMitAntwort = PersonenMitAntwort & olMail.To & vbCrLf
+                        Exit For
+                    End If
+                End If
+            Next Reply
+ 
+            ' Wenn keine Antwort vorhanden ist, sende eine Erinnerung
+            If Not antwortVorhanden Then
+                Set ReminderMail = olApp.CreateItem(olMailItem)
+                ReminderMail.Subject = "Erinnerung: Bitte senden Sie den Vertrag zurück"
+                ReminderMail.Body = "Bitte senden Sie den Vertrag zurück, falls dies noch nicht geschehen ist."
+                ReminderMail.To = olMail.To
+                ReminderMail.Send
+ 
+                ' Füge E-Mail-Adresse der Erinnerungsliste hinzu
+                PersonenMitErinnerung = PersonenMitErinnerung & olMail.To & vbCrLf
+            End If
+        End If
+    Next Item
+ 
+    ' Sende Zusammenfassungs-Mail
+    Dim ZusammenfassungMail As Outlook.MailItem
+    Set ZusammenfassungMail = olApp.CreateItem(olMailItem)
+    ZusammenfassungMail.Subject = "Zusammenfassung der Vertrags-Nachverfolgung"
+    ZusammenfassungMail.Body = PersonenMitAntwort & vbCrLf & vbCrLf & PersonenMitErinnerung
+    ZusammenfassungMail.To = "deine.email@beispiel.de" ' Empfänger für die Zusammenfassung anpassen
+    ZusammenfassungMail.Send
+ 
+    ' Aufräumen
+    Set olApp = Nothing
+    Set olNamespace = Nothing
+    Set NachverfolgungFolder = Nothing
+    Set AbgeschlossenFolder = Nothing
+    Set olInbox = Nothing
+End Sub
