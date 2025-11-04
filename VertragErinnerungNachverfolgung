@@ -17,6 +17,9 @@ Sub VertragErinnerungNachverfolgung()
     Dim Reply As Object
     Dim dtToday As Date
     Dim DaysToWait As Integer
+    Dim ZusammenfassungMail As Outlook.MailItem
+    Dim ItemsToProcess As Collection
+    Dim i As Integer
     
     ' Konfigurierbare Variablen
     Const VERTRAGSWESEN_ORDNER As String = "Vertragswesen"
@@ -58,52 +61,57 @@ Sub VertragErinnerungNachverfolgung()
     PersonenMitAntwort = "Personen, die geantwortet haben:" & vbCrLf
     PersonenMitErinnerung = "Personen, die eine Erinnerung erhalten haben:" & vbCrLf
  
-    ' Überprüfe E-Mails im Nachverfolgung-Ordner
+    ' Sammle E-Mails, die bearbeitet werden müssen (verhindert Iteration über sich ändernde Collection)
+    Set ItemsToProcess = New Collection
     For Each Item In NachverfolgungFolder.Items
         If TypeName(Item) = "MailItem" Then
             Set olMail = Item
-            
             ' Prüfe, ob die E-Mail älter als die festgelegte Anzahl von Tagen ist
             If olMail.ReceivedTime <= DateAdd("d", -DaysToWait, dtToday) Then
-                antwortVorhanden = False
- 
-                ' Suche im Posteingang nach Antworten
-                For Each Reply In olInbox.Items
-                    If TypeName(Reply) = "MailItem" Then
-                        Set replyMail = Reply
-                        ' Prüfe, ob eine Antwort vorliegt (bessere Subject-Matching-Logik)
-                        If IstAntwortAuf(replyMail.Subject, olMail.Subject) And _
-                            replyMail.SentOn >= olMail.SentOn Then
- 
-                            antwortVorhanden = True
-                            ' Verschiebe die E-Mails in den Abgeschlossen-Ordner
-                            olMail.Move AbgeschlossenFolder
-                            replyMail.Move AbgeschlossenFolder
- 
-                            ' Füge E-Mail-Adresse zur Antwort-Zusammenfassung hinzu
-                            PersonenMitAntwort = PersonenMitAntwort & olMail.To & vbCrLf
-                            Exit For
-                        End If
-                    End If
-                Next Reply
- 
-                ' Wenn keine Antwort vorhanden ist, sende eine Erinnerung
-                If Not antwortVorhanden Then
-                    Set ReminderMail = olApp.CreateItem(olMailItem)
-                    ReminderMail.Subject = "Erinnerung: Bitte senden Sie den Vertrag zurück"
-                    ReminderMail.Body = "Bitte senden Sie den Vertrag zurück, falls dies noch nicht geschehen ist."
-                    ReminderMail.To = olMail.To
-                    ReminderMail.Send
- 
-                    ' Füge E-Mail-Adresse der Erinnerungsliste hinzu
-                    PersonenMitErinnerung = PersonenMitErinnerung & olMail.To & vbCrLf
-                End If
+                ItemsToProcess.Add olMail
             End If
         End If
     Next Item
  
+    ' Überprüfe gesammelte E-Mails
+    For i = 1 To ItemsToProcess.Count
+        Set olMail = ItemsToProcess(i)
+        antwortVorhanden = False
+ 
+        ' Suche im Posteingang nach Antworten
+        For Each Reply In olInbox.Items
+            If TypeName(Reply) = "MailItem" Then
+                Set replyMail = Reply
+                ' Prüfe, ob eine Antwort vorliegt (bessere Subject-Matching-Logik)
+                If IstAntwortAuf(replyMail.Subject, olMail.Subject) And _
+                    replyMail.SentOn >= olMail.SentOn Then
+ 
+                    antwortVorhanden = True
+                    ' Verschiebe die E-Mails in den Abgeschlossen-Ordner
+                    olMail.Move AbgeschlossenFolder
+                    replyMail.Move AbgeschlossenFolder
+ 
+                    ' Füge E-Mail-Adresse zur Antwort-Zusammenfassung hinzu
+                    PersonenMitAntwort = PersonenMitAntwort & olMail.To & vbCrLf
+                    Exit For
+                End If
+            End If
+        Next Reply
+ 
+        ' Wenn keine Antwort vorhanden ist, sende eine Erinnerung
+        If Not antwortVorhanden Then
+            Set ReminderMail = olApp.CreateItem(olMailItem)
+            ReminderMail.Subject = "Erinnerung: Bitte senden Sie den Vertrag zurück"
+            ReminderMail.Body = "Bitte senden Sie den Vertrag zurück, falls dies noch nicht geschehen ist."
+            ReminderMail.To = olMail.To
+            ReminderMail.Send
+ 
+            ' Füge E-Mail-Adresse der Erinnerungsliste hinzu
+            PersonenMitErinnerung = PersonenMitErinnerung & olMail.To & vbCrLf
+        End If
+    Next i
+ 
     ' Sende Zusammenfassungs-Mail
-    Dim ZusammenfassungMail As Outlook.MailItem
     Set ZusammenfassungMail = olApp.CreateItem(olMailItem)
     ZusammenfassungMail.Subject = "Zusammenfassung der Vertrags-Nachverfolgung"
     ZusammenfassungMail.Body = PersonenMitAntwort & vbCrLf & vbCrLf & PersonenMitErinnerung
@@ -111,6 +119,11 @@ Sub VertragErinnerungNachverfolgung()
     ZusammenfassungMail.Send
  
     ' Aufräumen
+    Set ZusammenfassungMail = Nothing
+    Set ReminderMail = Nothing
+    Set olMail = Nothing
+    Set replyMail = Nothing
+    Set ItemsToProcess = Nothing
     Set olApp = Nothing
     Set olNamespace = Nothing
     Set NachverfolgungFolder = Nothing
@@ -123,6 +136,11 @@ ErrorHandler:
     MsgBox "Ein Fehler ist aufgetreten: " & Err.Description, vbCritical, "Fehler in VertragErinnerungNachverfolgung"
     ' Aufräumen auch im Fehlerfall
     On Error Resume Next
+    Set ZusammenfassungMail = Nothing
+    Set ReminderMail = Nothing
+    Set olMail = Nothing
+    Set replyMail = Nothing
+    Set ItemsToProcess = Nothing
     Set olApp = Nothing
     Set olNamespace = Nothing
     Set NachverfolgungFolder = Nothing
