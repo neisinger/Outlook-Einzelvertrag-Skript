@@ -56,7 +56,7 @@ Dieses VBA-Makro überwacht automatisch E-Mails im Ordner "Vertragswesen/Nachver
 ### **Verwendung**
 
 1. **Makro manuell starten:**
-   - Gehe in Outlook zu `Entwicklertools > Makros`, wähle `VertragErinnerungMitOrdnern` aus und klicke auf `Ausführen`.
+   - Gehe in Outlook zu `Entwicklertools > Makros`, wähle `VertragErinnerungNachverfolgung` aus und klicke auf `Ausführen`.
    - Das Makro überprüft die E-Mails und gibt eine Zusammenfassung aus.
 
 2. **Automatische Ausführung (optional):**

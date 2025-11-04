@@ -157,7 +157,7 @@ Private Function IstAntwortAuf(ByVal AntwortSubject As String, ByVal OriginalSub
     CleanAntwort = LCase(Trim(AntwortSubject))
     CleanOriginal = LCase(Trim(OriginalSubject))
     
-    ' Entferne gängige Antwort-Präfixe (RE:, AW:, Fwd:, WG:, etc.)
+    ' Entferne gängige Antwort-Präfixe (re:, aw:, fwd:, wg:)
     CleanAntwort = EntfernePraefixe(CleanAntwort)
     
     ' Prüfe, ob die bereinigten Betreffs übereinstimmen
