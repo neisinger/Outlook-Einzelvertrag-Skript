@@ -86,7 +86,6 @@ Sub VertragErinnerungNachverfolgung()
     For i = 1 To ItemsToProcess.Count
         Set olMail = ItemsToProcess(i)
         antwortVorhanden = False
-        Dim recipientAddress As String
         recipientAddress = olMail.To ' Speichere Empfänger vor dem Verschieben
  
         ' Suche im Posteingang nach Antworten
