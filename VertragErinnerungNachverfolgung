@@ -21,6 +21,7 @@ Sub VertragErinnerungNachverfolgung()
     Dim ZusammenfassungMail As Outlook.MailItem
     Dim ItemsToProcess As Collection
     Dim i As Integer
+    Dim recipientAddress As String
     
     ' Konfigurierbare Variablen
     Const VERTRAGSWESEN_ORDNER As String = "Vertragswesen"
@@ -45,7 +46,7 @@ Sub VertragErinnerungNachverfolgung()
     If VertragswesenFolder Is Nothing Then
         On Error GoTo ErrorHandler
         MsgBox "Fehler: Der Ordner '" & VERTRAGSWESEN_ORDNER & "' wurde nicht gefunden. Bitte erstellen Sie die erforderliche Ordnerstruktur.", vbCritical
-        GoTo ErrorHandler
+        Exit Sub
     End If
     
     Set NachverfolgungFolder = VertragswesenFolder.Folders(NACHVERFOLGUNG_ORDNER_NAME)
@@ -55,12 +56,12 @@ Sub VertragErinnerungNachverfolgung()
     ' Überprüfe, ob die Ordner existieren
     If NachverfolgungFolder Is Nothing Then
         MsgBox "Fehler: Der Ordner '" & VERTRAGSWESEN_ORDNER & "/" & NACHVERFOLGUNG_ORDNER_NAME & "' wurde nicht gefunden.", vbCritical
-        GoTo ErrorHandler
+        Exit Sub
     End If
     
     If AbgeschlossenFolder Is Nothing Then
         MsgBox "Fehler: Der Ordner '" & VERTRAGSWESEN_ORDNER & "/" & ABGESCHLOSSEN_ORDNER_NAME & "' wurde nicht gefunden.", vbCritical
-        GoTo ErrorHandler
+        Exit Sub
     End If
     
     Set olInbox = olNamespace.GetDefaultFolder(olFolderInbox)
@@ -85,6 +86,8 @@ Sub VertragErinnerungNachverfolgung()
     For i = 1 To ItemsToProcess.Count
         Set olMail = ItemsToProcess(i)
         antwortVorhanden = False
+        Dim recipientAddress As String
+        recipientAddress = olMail.To ' Speichere Empfänger vor dem Verschieben
  
         ' Suche im Posteingang nach Antworten
         For Each Reply In olInbox.Items
@@ -100,7 +103,7 @@ Sub VertragErinnerungNachverfolgung()
                     replyMail.Move AbgeschlossenFolder
  
                     ' Füge E-Mail-Adresse zur Antwort-Zusammenfassung hinzu
-                    PersonenMitAntwort = PersonenMitAntwort & olMail.To & vbCrLf
+                    PersonenMitAntwort = PersonenMitAntwort & recipientAddress & vbCrLf
                     Exit For
                 End If
             End If
@@ -111,11 +114,11 @@ Sub VertragErinnerungNachverfolgung()
             Set ReminderMail = olApp.CreateItem(olMailItem)
             ReminderMail.Subject = "Erinnerung: Bitte senden Sie den Vertrag zurück"
             ReminderMail.Body = "Bitte senden Sie den Vertrag zurück, falls dies noch nicht geschehen ist."
-            ReminderMail.To = olMail.To
+            ReminderMail.To = recipientAddress
             ReminderMail.Send
  
             ' Füge E-Mail-Adresse der Erinnerungsliste hinzu
-            PersonenMitErinnerung = PersonenMitErinnerung & olMail.To & vbCrLf
+            PersonenMitErinnerung = PersonenMitErinnerung & recipientAddress & vbCrLf
         End If
     Next i
  
