@@ -78,8 +78,9 @@ Dieses VBA-Makro überwacht automatisch E-Mails im Ordner "Vertragswesen/Nachver
 2. **Ordnernamen ändern:**
    - Die Zielordner für Nachverfolgung und abgeschlossene Nachrichten können zentral definiert werden:  
      ```vba
-     Const NACHVERFOLGUNG_ORDNER As String = "Vertragswesen/Nachverfolgung"
-     Const ABGESCHLOSSEN_ORDNER As String = "Vertragswesen/Abgeschlossen"
+     Const VERTRAGSWESEN_ORDNER As String = "Vertragswesen"
+     Const NACHVERFOLGUNG_ORDNER_NAME As String = "Nachverfolgung"
+     Const ABGESCHLOSSEN_ORDNER_NAME As String = "Abgeschlossen"
      ```
      Passe die Namen an deine Ordnerstruktur an.
 

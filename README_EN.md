@@ -78,8 +78,9 @@ This VBA macro automatically monitors emails in the "Vertragswesen/Nachverfolgun
 2. **Change Folder Names:**
    - The target folders for follow-up and completed messages can be centrally defined:  
      ```vba
-     Const NACHVERFOLGUNG_ORDNER As String = "Vertragswesen/Nachverfolgung"
-     Const ABGESCHLOSSEN_ORDNER As String = "Vertragswesen/Abgeschlossen"
+     Const VERTRAGSWESEN_ORDNER As String = "Vertragswesen"
+     Const NACHVERFOLGUNG_ORDNER_NAME As String = "Nachverfolgung"
+     Const ABGESCHLOSSEN_ORDNER_NAME As String = "Abgeschlossen"
      ```
      Adjust the names to match your folder structure.
 

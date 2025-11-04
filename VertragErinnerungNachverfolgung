@@ -19,8 +19,9 @@ Sub VertragErinnerungNachverfolgung()
     Dim DaysToWait As Integer
     
     ' Konfigurierbare Variablen
-    Const NACHVERFOLGUNG_ORDNER As String = "Vertragswesen/Nachverfolgung"
-    Const ABGESCHLOSSEN_ORDNER As String = "Vertragswesen/Abgeschlossen"
+    Const VERTRAGSWESEN_ORDNER As String = "Vertragswesen"
+    Const NACHVERFOLGUNG_ORDNER_NAME As String = "Nachverfolgung"
+    Const ABGESCHLOSSEN_ORDNER_NAME As String = "Abgeschlossen"
     Const ZUSAMMENFASSUNG_EMPFAENGER As String = "deine.email@beispiel.de"
     
     ' Anzahl der Tage, nach denen eine Erinnerung gesendet wird
@@ -36,19 +37,19 @@ Sub VertragErinnerungNachverfolgung()
  
     ' Hole die Zielordner
     On Error Resume Next
-    Set NachverfolgungFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders("Vertragswesen").Folders("Nachverfolgung")
-    Set AbgeschlossenFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders("Vertragswesen").Folders("Abgeschlossen")
+    Set NachverfolgungFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders(VERTRAGSWESEN_ORDNER).Folders(NACHVERFOLGUNG_ORDNER_NAME)
+    Set AbgeschlossenFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders(VERTRAGSWESEN_ORDNER).Folders(ABGESCHLOSSEN_ORDNER_NAME)
     On Error GoTo ErrorHandler
     
     ' Überprüfe, ob die Ordner existieren
     If NachverfolgungFolder Is Nothing Then
-        MsgBox "Fehler: Der Ordner '" & NACHVERFOLGUNG_ORDNER & "' wurde nicht gefunden.", vbCritical
-        Exit Sub
+        MsgBox "Fehler: Der Ordner '" & VERTRAGSWESEN_ORDNER & "/" & NACHVERFOLGUNG_ORDNER_NAME & "' wurde nicht gefunden.", vbCritical
+        GoTo ErrorHandler
     End If
     
     If AbgeschlossenFolder Is Nothing Then
-        MsgBox "Fehler: Der Ordner '" & ABGESCHLOSSEN_ORDNER & "' wurde nicht gefunden.", vbCritical
-        Exit Sub
+        MsgBox "Fehler: Der Ordner '" & VERTRAGSWESEN_ORDNER & "/" & ABGESCHLOSSEN_ORDNER_NAME & "' wurde nicht gefunden.", vbCritical
+        GoTo ErrorHandler
     End If
     
     Set olInbox = olNamespace.GetDefaultFolder(olFolderInbox)
