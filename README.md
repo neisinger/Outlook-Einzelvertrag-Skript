@@ -1,22 +1,40 @@
 ### **Vertragsüberwachung Makro**
 
-Dieses VBA-Makro überwacht automatisch E-Mails im Ordner "Vertragswesen/Nachverfolgung" und überprüft, ob es eingehende Antworten im Posteingang gibt. Wenn eine Antwort gefunden wird, werden die ursprüngliche Nachricht und die Antwort in den Ordner "Vertragswesen/Abgeschlossen" verschoben. Für Nachrichten ohne Antwort wird nach einer festgelegten Anzahl von Tagen eine Erinnerung versendet. 
+**[English Version](README_EN.md)** | **Deutsche Version**
+
+Dieses VBA-Makro überwacht automatisch E-Mails im Ordner "Vertragswesen/Nachverfolgung" und überprüft, ob es eingehende Antworten im Posteingang gibt. Wenn eine Antwort gefunden wird, werden die ursprüngliche Nachricht und die Antwort in den Ordner "Vertragswesen/Abgeschlossen" verschoben. Für Nachrichten ohne Antwort wird nach einer festgelegten Anzahl von Tagen (Standard: 7 Tage) eine Erinnerung versendet.
+
+**Neue Funktionen:**
+- ✅ Konfigurierbare Wartezeit (Standard: 7 Tage)
+- ✅ Verbesserte Betreff-Erkennung für Antworten (unterstützt RE:, AW:, FWD:, WG:)
+- ✅ Fehlerbehandlung und Validierung der Ordner
+- ✅ Robustere Code-Struktur mit Option Explicit 
 
 ---
 
 ### **Funktionen**
 
 1. **Überwachung von E-Mails:**
-   - Das Makro prüft E-Mails im Ordner "Vertragswesen/Nachverfolgung", die älter als N Tage sind.
+   - Das Makro prüft E-Mails im Ordner "Vertragswesen/Nachverfolgung", die älter als N Tage sind (Standard: 7 Tage).
 
-2. **Behandlung von Antworten:**
+2. **Intelligente Antwort-Erkennung:**
+   - Erkennt Antworten mit verschiedenen Präfixen (RE:, AW:, FWD:, WG:)
+   - Unterstützt mehrfache Präfixe (z.B. "RE: RE: Betreff")
+   - Case-insensitive Betreff-Vergleich
+
+3. **Behandlung von Antworten:**
    - Wenn eine Antwort mit demselben Betreff im Posteingang gefunden wird, werden die ursprüngliche E-Mail und die Antwort in den Ordner "Vertragswesen/Abgeschlossen" verschoben.
 
-3. **Erinnerungsversand:**
+4. **Erinnerungsversand:**
    - Für Nachrichten ohne Antwort wird eine Erinnerung an den ursprünglichen Empfänger gesendet, sofern sie älter als die festgelegte Anzahl von Tagen ist.
 
-4. **Automatische Zusammenfassung:**
+5. **Automatische Zusammenfassung:**
    - Nach Abschluss der Prüfung wird eine E-Mail mit einer Übersicht erstellt, die die Personen auflistet, die geantwortet haben, sowie die Empfänger der Erinnerung.
+
+6. **Fehlerbehandlung:**
+   - Validiert die Existenz der erforderlichen Ordner
+   - Zeigt benutzerfreundliche Fehlermeldungen an
+   - Verhindert Abstürze bei unerwarteten Situationen
 
 ---
 
@@ -51,24 +69,31 @@ Dieses VBA-Makro überwacht automatisch E-Mails im Ordner "Vertragswesen/Nachver
 ### **Anpassungen**
 
 1. **Überwachungszeitraum anpassen:**
-   - Die Anzahl der Tage, nach denen Nachrichten überprüft werden, kann in der Zeile angepasst werden:  
+   - Die Anzahl der Tage, nach denen Erinnerungen gesendet werden, kann in der Zeile angepasst werden:  
      ```vba
-     If olMail.ReceivedTime <= DateAdd("d", -N, dtToday) Then
+     DaysToWait = 7 ' Anpassbar: Standard ist 7 Tage
      ```
-     Ersetze `N` durch die gewünschte Anzahl an Tagen.
+     Ersetze `7` durch die gewünschte Anzahl an Tagen.
 
 2. **Ordnernamen ändern:**
    - Die Zielordner für Nachverfolgung und abgeschlossene Nachrichten können zentral definiert werden:  
      ```vba
-     NachverfolgungOrdnerName = "Vertragswesen/Nachverfolgung"
-     AbgeschlossenOrdnerName = "Vertragswesen/Abgeschlossen"
+     Const NACHVERFOLGUNG_ORDNER As String = "Vertragswesen/Nachverfolgung"
+     Const ABGESCHLOSSEN_ORDNER As String = "Vertragswesen/Abgeschlossen"
      ```
      Passe die Namen an deine Ordnerstruktur an.
 
 3. **Empfänger der Zusammenfassung:**
    - Ändere den Empfänger der Zusammenfassungs-E-Mail in der Zeile:
      ```vba
-     ZusammenfassungMail.To = "deine.email@domain.com"
+     Const ZUSAMMENFASSUNG_EMPFAENGER As String = "deine.email@beispiel.de"
+     ```
+
+4. **Erinnerungstext anpassen:**
+   - Du kannst Betreff und Inhalt der Erinnerungs-E-Mail nach Bedarf anpassen:
+     ```vba
+     ReminderMail.Subject = "Erinnerung: Bitte senden Sie den Vertrag zurück"
+     ReminderMail.Body = "Bitte senden Sie den Vertrag zurück, falls dies noch nicht geschehen ist."
      ```
 
 ---

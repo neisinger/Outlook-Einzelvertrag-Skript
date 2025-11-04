@@ -1,3 +1,5 @@
+Option Explicit
+
 Sub VertragErinnerungNachverfolgung()
     ' Deklariere Variablen
     Dim olApp As Outlook.Application
@@ -11,14 +13,44 @@ Sub VertragErinnerungNachverfolgung()
     Dim ReminderMail As Outlook.MailItem
     Dim PersonenMitAntwort As String
     Dim PersonenMitErinnerung As String
+    Dim Item As Object
+    Dim Reply As Object
+    Dim dtToday As Date
+    Dim DaysToWait As Integer
+    
+    ' Konfigurierbare Variablen
+    Const NACHVERFOLGUNG_ORDNER As String = "Vertragswesen/Nachverfolgung"
+    Const ABGESCHLOSSEN_ORDNER As String = "Vertragswesen/Abgeschlossen"
+    Const ZUSAMMENFASSUNG_EMPFAENGER As String = "deine.email@beispiel.de"
+    
+    ' Anzahl der Tage, nach denen eine Erinnerung gesendet wird
+    DaysToWait = 7 ' Anpassbar: Standard ist 7 Tage
+    dtToday = Date
  
+    ' Fehlerbehandlung aktivieren
+    On Error GoTo ErrorHandler
+    
     ' Initialisiere Outlook-Objekte
     Set olApp = Outlook.Application
     Set olNamespace = olApp.GetNamespace("MAPI")
  
     ' Hole die Zielordner
+    On Error Resume Next
     Set NachverfolgungFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders("Vertragswesen").Folders("Nachverfolgung")
     Set AbgeschlossenFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders("Vertragswesen").Folders("Abgeschlossen")
+    On Error GoTo ErrorHandler
+    
+    ' Überprüfe, ob die Ordner existieren
+    If NachverfolgungFolder Is Nothing Then
+        MsgBox "Fehler: Der Ordner '" & NACHVERFOLGUNG_ORDNER & "' wurde nicht gefunden.", vbCritical
+        Exit Sub
+    End If
+    
+    If AbgeschlossenFolder Is Nothing Then
+        MsgBox "Fehler: Der Ordner '" & ABGESCHLOSSEN_ORDNER & "' wurde nicht gefunden.", vbCritical
+        Exit Sub
+    End If
+    
     Set olInbox = olNamespace.GetDefaultFolder(olFolderInbox)
  
     ' Initialisiere Zusammenfassungs-Strings
@@ -29,39 +61,42 @@ Sub VertragErinnerungNachverfolgung()
     For Each Item In NachverfolgungFolder.Items
         If TypeName(Item) = "MailItem" Then
             Set olMail = Item
-            antwortVorhanden = False
+            
+            ' Prüfe, ob die E-Mail älter als die festgelegte Anzahl von Tagen ist
+            If olMail.ReceivedTime <= DateAdd("d", -DaysToWait, dtToday) Then
+                antwortVorhanden = False
  
-            ' Suche im Posteingang nach Antworten
-            For Each Reply In olInbox.Items
-                If TypeName(Reply) = "MailItem" Then
-                    Set replyMail = Reply
-                    ' Prüfe, ob eine Antwort mit "RE:" oder "AW:" im Betreff vorliegt (case-insensitiv)
-                    If (LCase(replyMail.Subject) = "re: " & LCase(olMail.Subject) Or _
-                        LCase(replyMail.Subject) = "aw: " & LCase(olMail.Subject)) And _
-                        replyMail.SentOn >= olMail.SentOn Then
+                ' Suche im Posteingang nach Antworten
+                For Each Reply In olInbox.Items
+                    If TypeName(Reply) = "MailItem" Then
+                        Set replyMail = Reply
+                        ' Prüfe, ob eine Antwort vorliegt (bessere Subject-Matching-Logik)
+                        If IstAntwortAuf(replyMail.Subject, olMail.Subject) And _
+                            replyMail.SentOn >= olMail.SentOn Then
  
-                        antwortVorhanden = True
-                        ' Verschiebe die E-Mails in den Abgeschlossen-Ordner
-                        olMail.Move AbgeschlossenFolder
-                        replyMail.Move AbgeschlossenFolder
+                            antwortVorhanden = True
+                            ' Verschiebe die E-Mails in den Abgeschlossen-Ordner
+                            olMail.Move AbgeschlossenFolder
+                            replyMail.Move AbgeschlossenFolder
  
-                        ' Füge E-Mail-Adresse zur Antwort-Zusammenfassung hinzu
-                        PersonenMitAntwort = PersonenMitAntwort & olMail.To & vbCrLf
-                        Exit For
+                            ' Füge E-Mail-Adresse zur Antwort-Zusammenfassung hinzu
+                            PersonenMitAntwort = PersonenMitAntwort & olMail.To & vbCrLf
+                            Exit For
+                        End If
                     End If
+                Next Reply
+ 
+                ' Wenn keine Antwort vorhanden ist, sende eine Erinnerung
+                If Not antwortVorhanden Then
+                    Set ReminderMail = olApp.CreateItem(olMailItem)
+                    ReminderMail.Subject = "Erinnerung: Bitte senden Sie den Vertrag zurück"
+                    ReminderMail.Body = "Bitte senden Sie den Vertrag zurück, falls dies noch nicht geschehen ist."
+                    ReminderMail.To = olMail.To
+                    ReminderMail.Send
+ 
+                    ' Füge E-Mail-Adresse der Erinnerungsliste hinzu
+                    PersonenMitErinnerung = PersonenMitErinnerung & olMail.To & vbCrLf
                 End If
-            Next Reply
- 
-            ' Wenn keine Antwort vorhanden ist, sende eine Erinnerung
-            If Not antwortVorhanden Then
-                Set ReminderMail = olApp.CreateItem(olMailItem)
-                ReminderMail.Subject = "Erinnerung: Bitte senden Sie den Vertrag zurück"
-                ReminderMail.Body = "Bitte senden Sie den Vertrag zurück, falls dies noch nicht geschehen ist."
-                ReminderMail.To = olMail.To
-                ReminderMail.Send
- 
-                ' Füge E-Mail-Adresse der Erinnerungsliste hinzu
-                PersonenMitErinnerung = PersonenMitErinnerung & olMail.To & vbCrLf
             End If
         End If
     Next Item
@@ -71,7 +106,7 @@ Sub VertragErinnerungNachverfolgung()
     Set ZusammenfassungMail = olApp.CreateItem(olMailItem)
     ZusammenfassungMail.Subject = "Zusammenfassung der Vertrags-Nachverfolgung"
     ZusammenfassungMail.Body = PersonenMitAntwort & vbCrLf & vbCrLf & PersonenMitErinnerung
-    ZusammenfassungMail.To = "deine.email@beispiel.de" ' Empfänger für die Zusammenfassung anpassen
+    ZusammenfassungMail.To = ZUSAMMENFASSUNG_EMPFAENGER
     ZusammenfassungMail.Send
  
     ' Aufräumen
@@ -80,4 +115,62 @@ Sub VertragErinnerungNachverfolgung()
     Set NachverfolgungFolder = Nothing
     Set AbgeschlossenFolder = Nothing
     Set olInbox = Nothing
+    
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "Ein Fehler ist aufgetreten: " & Err.Description, vbCritical, "Fehler in VertragErinnerungNachverfolgung"
+    ' Aufräumen auch im Fehlerfall
+    On Error Resume Next
+    Set olApp = Nothing
+    Set olNamespace = Nothing
+    Set NachverfolgungFolder = Nothing
+    Set AbgeschlossenFolder = Nothing
+    Set olInbox = Nothing
 End Sub
+
+' Hilfsfunktion: Prüft, ob ein Betreff eine Antwort auf einen anderen Betreff ist
+Private Function IstAntwortAuf(ByVal AntwortSubject As String, ByVal OriginalSubject As String) As Boolean
+    Dim CleanAntwort As String
+    Dim CleanOriginal As String
+    
+    ' Normalisiere beide Betreffs (Kleinbuchstaben, Leerzeichen entfernen)
+    CleanAntwort = LCase(Trim(AntwortSubject))
+    CleanOriginal = LCase(Trim(OriginalSubject))
+    
+    ' Entferne gängige Antwort-Präfixe (RE:, AW:, Fwd:, WG:, etc.)
+    CleanAntwort = EntfernePraefixe(CleanAntwort)
+    
+    ' Prüfe, ob die bereinigten Betreffs übereinstimmen
+    IstAntwortAuf = (CleanAntwort = CleanOriginal)
+End Function
+
+' Hilfsfunktion: Entfernt Antwort-Präfixe aus dem Betreff
+Private Function EntfernePraefixe(ByVal Subject As String) As String
+    Dim Result As String
+    Dim Changed As Boolean
+    
+    Result = Trim(Subject)
+    
+    ' Wiederhole, bis keine Präfixe mehr gefunden werden
+    Do
+        Changed = False
+        
+        ' Prüfe auf verschiedene Präfixe
+        If Left(Result, 3) = "re:" Then
+            Result = Trim(Mid(Result, 4))
+            Changed = True
+        ElseIf Left(Result, 3) = "aw:" Then
+            Result = Trim(Mid(Result, 4))
+            Changed = True
+        ElseIf Left(Result, 4) = "fwd:" Then
+            Result = Trim(Mid(Result, 5))
+            Changed = True
+        ElseIf Left(Result, 3) = "wg:" Then
+            Result = Trim(Mid(Result, 4))
+            Changed = True
+        End If
+    Loop While Changed
+    
+    EntfernePraefixe = Result
+End Function
