@@ -4,6 +4,7 @@ Sub VertragErinnerungNachverfolgung()
     ' Deklariere Variablen
     Dim olApp As Outlook.Application
     Dim olNamespace As Outlook.NameSpace
+    Dim VertragswesenFolder As Outlook.Folder
     Dim NachverfolgungFolder As Outlook.Folder
     Dim AbgeschlossenFolder As Outlook.Folder
     Dim olInbox As Outlook.Folder
@@ -38,10 +39,17 @@ Sub VertragErinnerungNachverfolgung()
     Set olApp = Outlook.Application
     Set olNamespace = olApp.GetNamespace("MAPI")
  
-    ' Hole die Zielordner
+    ' Hole die Zielordner mit verbesserter Fehlerbehandlung
     On Error Resume Next
-    Set NachverfolgungFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders(VERTRAGSWESEN_ORDNER).Folders(NACHVERFOLGUNG_ORDNER_NAME)
-    Set AbgeschlossenFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders(VERTRAGSWESEN_ORDNER).Folders(ABGESCHLOSSEN_ORDNER_NAME)
+    Set VertragswesenFolder = olNamespace.GetDefaultFolder(olFolderInbox).Folders(VERTRAGSWESEN_ORDNER)
+    If VertragswesenFolder Is Nothing Then
+        On Error GoTo ErrorHandler
+        MsgBox "Fehler: Der Ordner '" & VERTRAGSWESEN_ORDNER & "' wurde nicht gefunden. Bitte erstellen Sie die erforderliche Ordnerstruktur.", vbCritical
+        GoTo ErrorHandler
+    End If
+    
+    Set NachverfolgungFolder = VertragswesenFolder.Folders(NACHVERFOLGUNG_ORDNER_NAME)
+    Set AbgeschlossenFolder = VertragswesenFolder.Folders(ABGESCHLOSSEN_ORDNER_NAME)
     On Error GoTo ErrorHandler
     
     ' Überprüfe, ob die Ordner existieren
@@ -124,6 +132,7 @@ Sub VertragErinnerungNachverfolgung()
     Set olMail = Nothing
     Set replyMail = Nothing
     Set ItemsToProcess = Nothing
+    Set VertragswesenFolder = Nothing
     Set olApp = Nothing
     Set olNamespace = Nothing
     Set NachverfolgungFolder = Nothing
@@ -141,6 +150,7 @@ ErrorHandler:
     Set olMail = Nothing
     Set replyMail = Nothing
     Set ItemsToProcess = Nothing
+    Set VertragswesenFolder = Nothing
     Set olApp = Nothing
     Set olNamespace = Nothing
     Set NachverfolgungFolder = Nothing
@@ -175,17 +185,17 @@ Private Function EntfernePraefixe(ByVal Subject As String) As String
     Do
         Changed = False
         
-        ' Prüfe auf verschiedene Präfixe
-        If Left(Result, 3) = "re:" Then
+        ' Prüfe auf verschiedene Präfixe (mit Längenvalidierung)
+        If Len(Result) >= 3 And Left(Result, 3) = "re:" Then
             Result = Trim(Mid(Result, 4))
             Changed = True
-        ElseIf Left(Result, 3) = "aw:" Then
+        ElseIf Len(Result) >= 3 And Left(Result, 3) = "aw:" Then
             Result = Trim(Mid(Result, 4))
             Changed = True
-        ElseIf Left(Result, 4) = "fwd:" Then
+        ElseIf Len(Result) >= 4 And Left(Result, 4) = "fwd:" Then
             Result = Trim(Mid(Result, 5))
             Changed = True
-        ElseIf Left(Result, 3) = "wg:" Then
+        ElseIf Len(Result) >= 3 And Left(Result, 3) = "wg:" Then
             Result = Trim(Mid(Result, 4))
             Changed = True
         End If
